@@ -4,6 +4,14 @@ Provides a class to execute tasks in processes with asynchronous processing of
 results. It consumes the tasks lazily (you can virtually have infinite tasks)
 and calls the processing method as the results are done.
 
+## Installation
+
+Install directly from [Python Package Index](https://pypi.org/project/async-process-executor/):
+
+```bash
+pip install async_process_executor
+```
+
 ## Usage
 
 You must inherit from `async_process_executor.AsyncProcessExecutor` and
