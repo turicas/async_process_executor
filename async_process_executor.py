@@ -2,11 +2,20 @@ import datetime
 import multiprocessing
 from asyncio import get_event_loop, sleep
 from collections import namedtuple
-from multiprocessing import Pool, cpu_count
+
+
+def worker(return_dict, target, args, kwargs):
+    try:
+        result = target(*args, **kwargs)
+    except Exception as exp:
+        return_dict["status"] = "exception"
+        return_dict["exception"] = exp
+    else:
+        return_dict["status"] = "ok"
+        return_dict["result"] = result
 
 
 class Task:
-
     def __init__(self, function, args=None, kwargs=None):
         self.function = function
         self.args = args or []
@@ -80,10 +89,21 @@ class AsyncProcessExecutor:
     Execute tasks in processes and return its results asynchonously
     """
 
-    def __init__(self, workers=cpu_count(), initializer=None, sleep_time=0.01):
+    def __init__(
+        self,
+        workers=multiprocessing.cpu_count(),
+        initializer=None,
+        sleep_time=0.01,
+        max_working_time=None,
+    ):
         self.workers = workers
         self.initializer = initializer
         self.sleep_time = sleep_time
+        self.max_working_time = (
+            datetime.timedelta(seconds=max_working_time)
+            if max_working_time is not None
+            else None
+        )
 
     def run(self):
         loop = get_event_loop()
@@ -104,24 +124,51 @@ class AsyncProcessExecutor:
 
     async def execute(self):
         finished, has_more_tasks = False, True
-        tasks = self.tasks()
-        tasks_async_generator = tasks.__aiter__()
+        tasks_async_generator = self.tasks().__aiter__()
+        tasks = []
+        while not finished:
 
-        with Pool(self.workers, initializer=self.initializer) as pool:
-            results = []
-            while not finished:
-                for result in results:
-                    if result.ready():
-                        await self.process(result.get())
-                        results.remove(result)
-                for _ in range(self.workers - len(results)):
-                    try:
-                        task = await tasks_async_generator.__anext__()
-                    except StopAsyncIteration:
-                        has_more_tasks = False
+            # Check if some of the tasks finished or timed out
+            for task in tasks:
+                if task.finished:
+                    if task.status == "exception":
+                        # TODO: log
+                        task.start()  # Try again
+                        # TODO: should add this task to the end of task list?
+                        # TODO: implement max number of retries
+
+                    elif task.status == "ok":
+                        # TODO: log
+                        await self.process(task.result)
+                        tasks.remove(task)
+
                     else:
-                        results.append(pool.apply_async(task.function, task.args))
-                if not has_more_tasks and not results:
-                    finished = True
-                await sleep(self.sleep_time)
+                        raise RuntimeError("Task status not implemented")
+
+                elif (
+                    self.max_working_time is not None
+                    and task.working_time >= self.max_working_time
+                ):
+                    task.kill()
+                    task.start()
+                    # TODO: add max_working_time per task also
+                    # TODO: implement max number of retries
+                    # TODO: should add this task to the end of task list?
+                    # TODO: log
+
+            for _ in range(self.workers - len(tasks)):
+                try:
+                    task = await tasks_async_generator.__anext__()
+                    # TODO: log
+                except StopAsyncIteration:
+                    has_more_tasks = False
+                    # TODO: log
+                else:
+                    tasks.append(task)
+                    task.start()
+                    # TODO: log
+
+            finished = not has_more_tasks and len(tasks) == 0
+            await sleep(self.sleep_time)
+
         await self.close()
