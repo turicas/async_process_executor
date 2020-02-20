@@ -1,9 +1,78 @@
+import datetime
+import multiprocessing
 from asyncio import get_event_loop, sleep
 from collections import namedtuple
 from multiprocessing import Pool, cpu_count
 
 
-Task = namedtuple("Task", ["function", "args"])
+class Task:
+
+    def __init__(self, function, args=None, kwargs=None):
+        self.function = function
+        self.args = args or []
+        self.kwargs = kwargs or {}
+        self._manager = None
+        self._process = None
+        self._result_dict = None
+        self._start_time = None
+
+    def start(self):
+        self._manager = multiprocessing.Manager()
+        self._result_dict = self._manager.dict()
+        self._process = multiprocessing.Process(
+            target=worker,
+            args=(self._result_dict, self.function, self.args, self.kwargs),
+        )
+        self._process.start()
+        self._start_time = datetime.datetime.now()
+
+    @property
+    def started(self):
+        return self._start_time is not None
+
+    @property
+    def finished(self):
+        return not self._process.is_alive()
+
+    def kill(self):
+        if not self.started:
+            raise RuntimeError("Task not started")
+        else:
+            self._process.kill()
+
+    @property
+    def working_time(self):
+        if not self.started:
+            raise RuntimeError("Task not started")
+        else:
+            return datetime.datetime.now() - self._start_time
+
+    @property
+    def status(self):
+        if not self.finished:
+            raise RuntimeError("Task not finished")
+        else:
+            return self._result_dict["status"]
+
+    @property
+    def exception(self):
+        if not self.finished:
+            raise RuntimeError("Task not finished")
+        else:
+            try:
+                return self._result_dict["exception"]
+            except KeyError:
+                raise RuntimeError("Task has no exception")
+
+    @property
+    def result(self):
+        if not self.finished:
+            raise RuntimeError("Task not finished")
+        else:
+            try:
+                return self._result_dict["result"]
+            except KeyError:
+                raise RuntimeError("Task has no result")
 
 
 class AsyncProcessExecutor:
