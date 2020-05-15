@@ -5,9 +5,10 @@ def my_task(task_number):
     import random
     import time
 
-    sleep_time = random.randint(1, 100) / 10
-    time.sleep(sleep_time)
-    return task_number, sleep_time
+    for sleep_cycle in range(1, random.randint(1, 10)):
+        sleep_time = random.randint(1, 100) / 100
+        time.sleep(sleep_time)
+        yield task_number, sleep_cycle, sleep_time
 
 
 class MyTaskExecutor(AsyncProcessExecutor):
@@ -17,17 +18,14 @@ class MyTaskExecutor(AsyncProcessExecutor):
             print(f"Task #{task_number} consumed")
 
     async def process(self, result):
-        task_number, sleep_time = result
-        print(f"Task #{task_number} completed (sleep_time={sleep_time})")
+        task_number, sleep_cycle, sleep_time = result
+        print(f"Task #{task_number} got item: sleep_cycle={sleep_cycle}, sleep_time={sleep_time}")
 
     async def finished(self, task):
-        # You don't need to implement this method - it's called just after
-        # `self.process` is called. You must implement `self.process` to
-        # process task's result.
-        print(f"#{task} finished")
+        print(f"{task} finished")
 
 
 if __name__ == "__main__":
     workers = 4
     print(f"Starting async task executor with {workers} workers.")
-    MyTaskExecutor(workers=workers, max_working_time=5).run()
+    MyTaskExecutor(workers=workers).run()
