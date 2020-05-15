@@ -24,4 +24,4 @@ class MyTaskExecutor(AsyncProcessExecutor):
 if __name__ == "__main__":
     workers = 4
     print(f"Starting async task executor with {workers} workers.")
-    MyTaskExecutor(workers=workers).run()
+    MyTaskExecutor(workers=workers, max_working_time=5).run()

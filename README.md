@@ -47,3 +47,15 @@ if __name__ == "__main__":
     print(f"Starting async task executor with {workers} workers.")
     MyTaskExecutor(workers=workers).run()
 ```
+
+You can also limit the amount of time a worker will work on the task (the
+process will be killed and the task will be started again) by passing
+`max_working_time`, in seconds:
+
+```python
+    MyTaskExecutor(workers=workers, max_working_time=7).run()
+```
+
+
+- TODO: cli to execute tasks from CSV. Example: `asyncexec 'module.function' 'file.csv'` (will read rows and create tasks automatically)
+- TODO: way to save/continue task execution (identify which tasks were executed by uuid?)
