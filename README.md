@@ -12,6 +12,11 @@ Install directly from [Python Package Index](https://pypi.org/project/async-proc
 pip install async_process_executor
 ```
 
+> Note: the command above will install from the `master` branch. If you want
+> the latest version (`develop` branch), execute:
+> `pip install https://github.com/turicas/async_process_executor/archive/develop.zip`
+
+
 ## Usage
 
 ### Regular functions
