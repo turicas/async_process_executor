@@ -4,7 +4,7 @@ from setuptools import setup
 setup(
     name="async_process_executor",
     description="Run tasks in processes asynchronously",
-    version="0.1.0",
+    version="0.2.0dev0",
     author="Álvaro Justen",
     author_email="alvarojusten@gmail.com",
     url="https://github.com/turicas/async_process_executor/",
